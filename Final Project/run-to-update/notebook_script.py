@@ -97,7 +97,10 @@ def assemble_all_reviews(root_path='DataX15/Final Project/'):
 def predict_sentiment(data, root_path='DataX15/Final Project/'):
   analyzer = SentimentIntensityAnalyzer()
   data['score_pros'] = pd.DataFrame(list(data['pros'].astype(str).apply(analyzer.polarity_scores))).compound
-  data['score_cons'] = -pd.DataFrame(list(data['cons'].astype(str).apply(analyzer.polarity_scores))).compound
+  data['score_pros'] = MinMaxScaler(feature_range=(0, 100)).fit_transform(data['score_pros'])
+  data['score_cons'] = pd.DataFrame(list(data['cons'].astype(str).apply(analyzer.polarity_scores))).compound
+  data['score_cons'] = MinMaxScaler(feature_range=(-100, 0)).fit_transform(data['score_cons'])
+
   data.to_csv(root_path + 'datasets/all_reviews.csv', index = False, sep = ';')
   return data
 
@@ -136,7 +139,7 @@ def aggregate_company_results(data, columns):
   return results_aggregated.merge(results_pros, left_index = True, right_index = True).merge(results_cons, left_index = True, right_index = True).astype(int)
 
 
-def get_tableau_input(data, columns, nature=None):
+def get_tableau_input(data, columns, nature=None, root_path='DataX15/Final Project/'):
   """
   nature:
   - None if combine averaged scores on pros and cons
@@ -189,5 +192,20 @@ def get_tableau_input(data, columns, nature=None):
   return output
 
 
-def generate_tableau_inputs(data, columns):
+def generate_tableau_inputs(data, columns, root_path='DataX15/Final Project/'):
   return get_tableau_input(data, columns, None), get_tableau_input(data, columns, 'pros'), get_tableau_input(data, columns, 'cons')
+
+
+def generate_tableau_timeline(data, root_path='DataX15/Final Project/'):
+  out = pd.DataFrame(columns = ['Company', 'Date', 'Score', 'Review', 'Criteria'])
+  columns = data.columns
+  for col in columns[-24:]:
+    criteria = col.split('_')[0]
+    nature = col.split('_')[1]
+    selected = data[data[col] == 1]['Company', 'date', f'score_{nature}', nature]
+    selected['Criteria'] = criteria[0].CAPITALE() + criteria[1:]
+    selected.columns = ['Company', 'Date', 'Score', 'Review', 'Criteria']
+    out = out.append(selected)
+
+  out.to_csv(root_path + f'datasets/Tableau_timeline_S.csv', index = False, sep = ';')
+  return out
