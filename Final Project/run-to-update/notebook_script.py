@@ -97,9 +97,9 @@ def assemble_all_reviews(root_path='DataX15/Final Project/'):
 def predict_sentiment(data, root_path='DataX15/Final Project/'):
   analyzer = SentimentIntensityAnalyzer()
   data['score_pros'] = pd.DataFrame(list(data['pros'].astype(str).apply(analyzer.polarity_scores))).compound
-  data['score_pros'] = MinMaxScaler(feature_range=(0, 100)).fit_transform(data['score_pros'])
+  data['score_pros'] = MinMaxScaler(feature_range=(0, 100)).fit_transform(data['score_pros'].values.reshape(-1,1))
   data['score_cons'] = pd.DataFrame(list(data['cons'].astype(str).apply(analyzer.polarity_scores))).compound
-  data['score_cons'] = MinMaxScaler(feature_range=(-100, 0)).fit_transform(data['score_cons'])
+  data['score_cons'] = MinMaxScaler(feature_range=(-100, 0)).fit_transform(data['score_cons'].values.reshape(-1,1))
 
   data.to_csv(root_path + 'datasets/all_reviews.csv', index = False, sep = ';')
   return data
@@ -137,6 +137,15 @@ def aggregate_company_results(data, columns):
     results_aggregated[f'{col}_mean'] = MinMaxScaler(feature_range=(0, 100)).fit_transform(results_aggregated[f'{col}_mean'].values.reshape(-1,1))
     results_aggregated[f'{col}_count'] = results_pros[f'{col}_pros_count'] + results_cons[f'{col}_cons_count']
   return results_aggregated.merge(results_pros, left_index = True, right_index = True).merge(results_cons, left_index = True, right_index = True).astype(int)
+
+
+def keywords_topic_detection(data, all_keywords_dict):
+  for criteria in list(all_keywords_dict.keys()):
+    keywords = all_keywords_dict[criteria]
+    data[f'{criteria}_pros'] = data['pros'].astype(str).apply(lambda x: any([x.lower().find(word) >=0 for word in keywords])).astype(int)
+    data[f'{criteria}_cons'] = data['cons'].astype(str).apply(lambda x: any([x.lower().find(word) >=0 for word in keywords])).astype(int)
+  
+  data.to_csv(root_path + 'datasets/all_reviews_S.csv', index = False, sep = ';')
 
 
 def get_tableau_input(data, columns, nature=None, root_path='DataX15/Final Project/'):
@@ -202,8 +211,8 @@ def generate_tableau_timeline(data, root_path='DataX15/Final Project/'):
   for col in columns[-24:]:
     criteria = col.split('_')[0]
     nature = col.split('_')[1]
-    selected = data[data[col] == 1]['Company', 'date', f'score_{nature}', nature]
-    selected['Criteria'] = criteria[0].CAPITALE() + criteria[1:]
+    selected = data[data[col] == 1][['Company', 'date', f'score_{nature}', nature]]
+    selected['Criteria'] = criteria[0].upper() + criteria[1:]
     selected.columns = ['Company', 'Date', 'Score', 'Review', 'Criteria']
     out = out.append(selected)
 
