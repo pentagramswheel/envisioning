@@ -146,6 +146,7 @@ def keywords_topic_detection(data, all_keywords_dict):
     data[f'{criteria}_cons'] = data['cons'].astype(str).apply(lambda x: any([x.lower().find(word) >=0 for word in keywords])).astype(int)
   
   data.to_csv(root_path + 'datasets/all_reviews_S.csv', index = False, sep = ';')
+  return data
 
 
 def get_tableau_input(data, columns, nature=None, root_path='DataX15/Final Project/'):
